@@ -25,8 +25,9 @@ export const fetchEvaluationsAdmin = async () => {
   return ensureArrayResponse(data);
 };
 
-export const decryptEvaluation = async (id) => {
-  const { data } = await apiClient.get(`/api/evaluations/${id}/decrypt`);
+export const decryptEvaluation = async (id, facultyEmail) => {
+  const params = facultyEmail ? { facultyEmail } : undefined;
+  const { data } = await apiClient.get(`/api/evaluations/${id}/decrypt`, { params });
   return data;
 };
 

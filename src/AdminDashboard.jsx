@@ -5,8 +5,14 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Autocomplete,
   Container,
   Fade,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
   Paper,
   Skeleton,
   Stack,
@@ -14,11 +20,9 @@ import {
   Tabs,
   Typography,
   Zoom,
-  IconButton,
-  Tooltip,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { ShieldCheck, Key, User, RefreshCw } from 'lucide-react';
+import { ShieldCheck, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   fetchCriteria,
@@ -61,8 +65,10 @@ const headerVariants = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.38, ease: [0.4, 0, 0.2, 1] } },
 };
  
-const AdminDashboard = ({ adminToken }) => {
+const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
   const token = adminToken || sessionStorage.getItem('adminToken');
+  const [facultyPreviewOpen, setFacultyPreviewOpen] = useState(false);
+  const [selectedFacultyPreview, setSelectedFacultyPreview] = useState(null);
  
   const [activeTab, setActiveTab] = useState(TAB_INDEX.OVERVIEW);
   const [error, setError] = useState('');
@@ -118,6 +124,14 @@ const AdminDashboard = ({ adminToken }) => {
   const evaluationRows = useMemo(() => withStableRowIds(evaluations, 'evaluation'), [evaluations]);
   const professorRows = useMemo(() => withStableRowIds(professors, 'professor'), [professors]);
   const criteriaRows = useMemo(() => withStableRowIds(criteria, 'criterion'), [criteria]);
+  const facultyPreviewOptions = useMemo(
+    () =>
+      professorRows.map((professor) => ({
+        label: `${professor.name || 'Unnamed faculty'} <${professor.email || 'no-email'}>`,
+        email: professor.email || '',
+      })),
+    [professorRows]
+  );
  
   const summaryStats = useMemo(
     () => [
@@ -178,6 +192,27 @@ const AdminDashboard = ({ adminToken }) => {
     if (activeTab === TAB_INDEX.PROFESSORS) return refetchProfessors();
     if (activeTab === TAB_INDEX.CRITERIA) return refetchCriteria();
   };
+
+  const openFacultyPreview = () => {
+    if (facultyPreviewOptions.length > 0) {
+      setSelectedFacultyPreview(facultyPreviewOptions[0]);
+    }
+    setFacultyPreviewOpen(true);
+  };
+
+  const closeFacultyPreview = () => {
+    setFacultyPreviewOpen(false);
+    setSelectedFacultyPreview(null);
+  };
+
+  const handleLaunchFacultyPreview = () => {
+    if (selectedFacultyPreview?.email) {
+      if (typeof onPreviewFaculty === 'function') {
+        onPreviewFaculty(selectedFacultyPreview.email);
+      }
+      closeFacultyPreview();
+    }
+  };
  
   return (
     <Container maxWidth="lg" sx={{ mt: 3 }}>
@@ -203,23 +238,6 @@ const AdminDashboard = ({ adminToken }) => {
                 variant="outlined"
               />
 
-              {/* Security-related quick actions: Key (rotate/manage keys) and User (manage admins) */}
-              <Tooltip title="Manage keys" placement="bottom">
-                <span>
-                  <IconButton size="small" aria-label="manage-keys">
-                    <Key size={16} />
-                  </IconButton>
-                </span>
-              </Tooltip>
-
-              <Tooltip title="Manage admins" placement="bottom">
-                <span>
-                  <IconButton size="small" aria-label="manage-admins">
-                    <User size={16} />
-                  </IconButton>
-                </span>
-              </Tooltip>
-
               <Button
                 startIcon={<RefreshCw size={16} />}
                 endIcon={isRefreshing ? <CircularProgress size={16} color="inherit" /> : null}
@@ -228,6 +246,10 @@ const AdminDashboard = ({ adminToken }) => {
                 disabled={isRefreshing}
               >
                 {refreshButtonLabel}
+              </Button>
+
+              <Button variant="contained" onClick={openFacultyPreview} disabled={professorRows.length === 0}>
+                Preview faculty page
               </Button>
             </Stack>
           </Stack>
@@ -394,6 +416,30 @@ const AdminDashboard = ({ adminToken }) => {
           )}
         </AnimatePresence>
       </Paper>
+
+      <Dialog open={facultyPreviewOpen} onClose={closeFacultyPreview} fullWidth maxWidth="sm">
+        <DialogTitle>Preview faculty page</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Choose a faculty email to inspect the exact dashboard and decrypted messages for that account.
+          </Typography>
+          <Autocomplete
+            options={facultyPreviewOptions}
+            value={selectedFacultyPreview}
+            onChange={(_event, value) => setSelectedFacultyPreview(value)}
+            getOptionLabel={(option) => option?.label || ''}
+            renderInput={(params) => <TextField {...params} label="Faculty account" placeholder="Select an email" />}
+            isOptionEqualToValue={(option, value) => option?.email === value?.email}
+            noOptionsText="No faculty accounts available"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeFacultyPreview}>Cancel</Button>
+          <Button variant="contained" onClick={handleLaunchFacultyPreview} disabled={!selectedFacultyPreview?.email}>
+            Open preview
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

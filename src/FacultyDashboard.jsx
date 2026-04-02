@@ -37,7 +37,7 @@ const computeMetricAverage = (scores = []) => {
     return total / scores.length;
 };
 
-const FacultyDashboard = ({ facultyEmail, facultyAvatar }) => {
+const FacultyDashboard = ({ facultyEmail, facultyAvatar, previewMode = false, onExitPreview }) => {
     const [evals, setEvals] = useState([]);
     const [criteriaLookup, setCriteriaLookup] = useState({});
     const [loading, setLoading] = useState(false);
@@ -51,21 +51,6 @@ const FacultyDashboard = ({ facultyEmail, facultyAvatar }) => {
     // ✅ ONLY UI UPDATED (Glassmorphism)
     // ✅ NO LOGIC CHANGED
 
-
-    const glass = {
-        background: 'rgba(255,255,255,0.65)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        border: '1px solid rgba(255,255,255,0.4)',
-    };
-
-    const glassCard = {
-        background: 'rgba(255,255,255,0.7)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255,255,255,0.5)',
-        boxShadow: '0 4px 24px rgba(15,23,42,0.08)',
-    };
 
     const fetchAndDecryptEvaluations = useCallback(async () => {
         if (!facultyEmail) {
@@ -105,7 +90,7 @@ const FacultyDashboard = ({ facultyEmail, facultyAvatar }) => {
                     rawEvals.map(async (ev) => {
                         try {
                             // Call the same decryption service used by Admin
-                            const decryptedText = await decryptEvaluation(ev.id);
+                            const decryptedText = await decryptEvaluation(ev.id, facultyEmail);
                             return { ...ev, decryptedComment: decryptedText };
                         } catch (err) {
                             console.error(`Failed to decrypt ID ${ev.id}:`, err);
@@ -138,6 +123,33 @@ const FacultyDashboard = ({ facultyEmail, facultyAvatar }) => {
 
     return (
         <Box sx={{ py: 2 }}>
+            {previewMode && typeof onExitPreview === 'function' && (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        mb: 2,
+                        p: 2,
+                        borderRadius: 3,
+                        border: '1px solid rgba(0, 51, 102, 0.15)',
+                        bgcolor: 'rgba(255, 204, 0, 0.08)',
+                    }}
+                >
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }}>
+                        <Box>
+                            <Typography variant="subtitle2" fontWeight={800} color={UA_BLUE}>
+                                Admin preview mode
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                You are inspecting the faculty dashboard for <b>{facultyEmail}</b>.
+                            </Typography>
+                        </Box>
+                        <Button variant="outlined" onClick={onExitPreview} sx={{ fontWeight: 800 }}>
+                            Return to admin panel
+                        </Button>
+                    </Stack>
+                </Paper>
+            )}
+
             {/* UA Header with Logo Placeholder */}
             <Paper
                 elevation={0}

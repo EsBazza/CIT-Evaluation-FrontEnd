@@ -19,8 +19,17 @@ const Login = ({ onLogin }) => {
   const [adminCreds, setAdminCreds] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const expectedGoogleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+
+  const getAcademicRole = (email) => {
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    if (normalizedEmail.endsWith('.student@ua.edu.ph')) {
+      return 'STUDENT';
+    }
+    if (normalizedEmail.endsWith('@ua.edu.ph')) {
+      return 'FACULTY';
+    }
+    return null;
+  };
 
   const handleGoogleSuccess = async (googleResponse) => {
     try {
@@ -46,10 +55,13 @@ const Login = ({ onLogin }) => {
         return;
       }
       await handleGoogleSuccess(res);
-      const isFaculty = decoded.email.startsWith('faculty.') || decoded.email.startsWith('prof.');
-      const role = isFaculty ? 'FACULTY' : 'STUDENT';
+      const role = getAcademicRole(decoded.email);
+      if (!role) {
+        setError('Unauthorized: Please use your official @ua.edu.ph Google account.');
+        return;
+      }
       onLogin(role, decoded.email, null, decoded.picture);
-    } catch (_err) {
+    } catch {
       setError('Google authentication failed. Please try again.');
     }
   };

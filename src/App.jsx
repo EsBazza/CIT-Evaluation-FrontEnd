@@ -38,7 +38,7 @@ const brandColors = {
 };
 
 // NEW: Glassmorphism Style Constant
-export const glassStyle = {
+const glassStyle = {
   background: 'rgba(255, 255, 255, 0.7)',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
@@ -222,6 +222,7 @@ const getStoredSession = () => {
 
 const App = () => {
   const [session, setSession] = useState(() => getStoredSession());
+  const [previewFacultyEmail, setPreviewFacultyEmail] = useState('');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -243,13 +244,33 @@ const App = () => {
     if (typeof window !== 'undefined') {
       window.sessionStorage.removeItem('adminToken');
     }
+    setPreviewFacultyEmail('');
     setSession(createEmptySession());
   }, []);
 
+  const handlePreviewFaculty = useCallback((email) => {
+    setPreviewFacultyEmail(email || '');
+  }, []);
+
+  const handleExitFacultyPreview = useCallback(() => {
+    setPreviewFacultyEmail('');
+  }, []);
+
   const renderContent = () => {
+    if (session.role === 'ADMIN' && previewFacultyEmail) {
+      return (
+        <FacultyDashboard
+          facultyEmail={previewFacultyEmail}
+          facultyAvatar={session.avatar}
+          previewMode
+          onExitPreview={handleExitFacultyPreview}
+        />
+      );
+    }
+
     switch (session.role) {
       case 'ADMIN':
-        return <AdminDashboard adminToken={session.token} />;
+        return <AdminDashboard adminToken={session.token} onPreviewFaculty={handlePreviewFaculty} />;
       case 'FACULTY':
         return <FacultyDashboard facultyEmail={session.email} facultyAvatar={session.avatar} />;
       case 'STUDENT':
@@ -274,6 +295,8 @@ const App = () => {
       FACULTY: 'Faculty Portal',
       STUDENT: 'Student Evaluation Hub',
     }[session.role] ?? 'CIT Evaluation';
+
+  const headerTitle = session.role === 'ADMIN' && previewFacultyEmail ? 'Faculty Preview' : sessionTitle;
 
   const isAuthenticated = Boolean(session.role);
   const sessionAvatar = session.role === 'FACULTY' && !session.avatar ? uaLogo : session.avatar;
@@ -312,8 +335,13 @@ const App = () => {
                         Active Session
                       </Typography>
                       <Typography variant="h5" fontWeight={800} color="primary.main">
-                        {sessionTitle}
+                        {headerTitle}
                       </Typography>
+                      {session.role === 'ADMIN' && previewFacultyEmail && (
+                        <Typography variant="body2" color="secondary.main" sx={{ fontWeight: 700 }}>
+                          Previewing faculty view for {previewFacultyEmail}
+                        </Typography>
+                      )}
                       <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.85 }}>
                         {session.email || 'No email provided'}
                       </Typography>
