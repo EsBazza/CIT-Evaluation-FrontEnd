@@ -32,6 +32,11 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
 } from 'recharts';
 import LoadStateCard from '../shared/LoadStateCard';
 
@@ -136,6 +141,27 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
         return b.responses - a.responses;
       });
   }, [filteredEvaluations, professorNameByEmail]);
+
+  // NEW: Logical data for the Radar Chart
+  const performanceCriteriaData = useMemo(() => {
+    const criteriaMap = {};
+    
+    filteredEvaluations.forEach(ev => {
+        ev.scores?.forEach(s => {
+            if (!criteriaMap[s.criterion]) {
+                criteriaMap[s.criterion] = { subject: s.criterion, fullMark: 10, total: 0, count: 0 };
+            }
+            criteriaMap[s.criterion].total += Number(s.score) || 0;
+            criteriaMap[s.criterion].count += 1;
+        });
+    });
+
+    return Object.values(criteriaMap).map(c => ({
+        subject: c.subject,
+        A: Number((c.total / c.count).toFixed(2)),
+        fullMark: 10
+    }));
+  }, [filteredEvaluations]);
 
   const pieData = useMemo(() => {
     const topFive = teacherRanking.slice(0, 5).map((item) => ({
@@ -308,41 +334,76 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
         </Grid>
       </Grid>
 
-      <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0' }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1.2} sx={{ mb: 1 }}>
-          <Typography variant="subtitle1" fontWeight={800} color="primary.main">
-            Faculty Ranking
-          </Typography>
-          <Chip
-            color="secondary"
-            variant="outlined"
-            icon={<EmojiEventsRoundedIcon />}
-            label={bestTeacher ? `Top: ${bestTeacher.name}` : 'No ranked teacher'}
-          />
-        </Stack>
+      {/* New Visual Section: Radar Chart and Ranking List */}
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={6}>
+            <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', height: 460 }}>
+                <Typography variant="subtitle1" fontWeight={750} sx={{ mb: 1 }}>
+                    Performance competency
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Spider chart showing average scores across evaluation criteria.
+                </Typography>
+                <Box sx={{ width: '100%', height: 350 }}>
+                    <ResponsiveContainer>
+                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceCriteriaData}>
+                            <PolarGrid stroke="#e2e8f0" />
+                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 600 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 10]} />
+                            <Radar
+                                name="Average Competency"
+                                dataKey="A"
+                                stroke="#0c4a8a"
+                                fill="#0c4a8a"
+                                fillOpacity={0.5}
+                            />
+                            <Tooltip />
+                        </RadarChart>
+                    </ResponsiveContainer>
+                </Box>
+            </Paper>
+        </Grid>
 
-        <List disablePadding>
-          {teacherRanking.slice(0, 5).map((teacher, index) => (
-            <ListItem
-              key={teacher.email}
-              sx={{
-                px: 0,
-                py: 1,
-                borderTop: index === 0 ? 'none' : '1px solid #f1f5f9',
-              }}
-            >
-              <ListItemAvatar>
-                <Avatar sx={{ bgcolor: index === 0 ? '#d97706' : '#0c4a8a' }}>{index + 1}</Avatar>
-              </ListItemAvatar>
-              <ListItemText
-                primary={teacher.name}
-                secondary={`${teacher.email} • ${teacher.responses} response${teacher.responses === 1 ? '' : 's'}`}
-              />
-              <Chip label={`${teacher.avgScore.toFixed(2)} / 10`} color={index === 0 ? 'warning' : 'default'} size="small" />
-            </ListItem>
-          ))}
-        </List>
-      </Paper>
+        <Grid item xs={12} md={6}>
+            <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', height: 460, overflowY: 'auto' }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1.2} sx={{ mb: 1 }}>
+                <Typography variant="subtitle1" fontWeight={800} color="primary.main">
+                    Faculty Ranking
+                </Typography>
+                <Chip
+                    color="secondary"
+                    variant="outlined"
+                    icon={<EmojiEventsRoundedIcon />}
+                    size="small"
+                    label={bestTeacher ? `Top: ${bestTeacher.name}` : 'No ranked teacher'}
+                />
+                </Stack>
+
+                <List disablePadding>
+                {teacherRanking.slice(0, 8).map((teacher, index) => (
+                    <ListItem
+                    key={teacher.email}
+                    sx={{
+                        px: 0,
+                        py: 1,
+                        borderTop: index === 0 ? 'none' : '1px solid #f1f5f9',
+                    }}
+                    >
+                    <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: index === 0 ? '#d97706' : '#0c4a8a', width: 32, height: 32, fontSize: '0.875rem' }}>{index + 1}</Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                        primary={teacher.name}
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
+                        secondary={`${teacher.responses} response${teacher.responses === 1 ? '' : 's'}`}
+                    />
+                    <Chip label={`${teacher.avgScore.toFixed(2)}`} color={index === 0 ? 'warning' : 'default'} size="small" />
+                    </ListItem>
+                ))}
+                </List>
+            </Paper>
+        </Grid>
+      </Grid>
     </Stack>
   );
 };

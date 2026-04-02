@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { enqueueSnackbar } from 'notistack';
+import { toast } from 'sonner';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -32,21 +32,21 @@ const CriteriaManager = ({ criteria, loading, error, onRetry, sharedGridSx, card
     mutationFn: ({ id, payload }) => (id ? updateCriterion(id, payload) : createCriterion(payload)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-criteria'] });
-      enqueueSnackbar(selectedCriterion ? 'Criterion updated.' : 'Criterion added.', { variant: 'success' });
+      toast.success(selectedCriterion ? 'Criterion updated.' : 'Criterion added.');
       setCriterionDialogOpen(false);
       setSelectedCriterion(null);
       setCriterionForm({ title: '' });
     },
-    onError: (err) => enqueueSnackbar(getApiErrorMessage(err, 'Unable to save criterion.'), { variant: 'error' }),
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Unable to save criterion.')),
   });
 
   const removeCriterionMutation = useMutation({
     mutationFn: (id) => deleteCriterion(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-criteria'] });
-      enqueueSnackbar('Criterion removed.', { variant: 'success' });
+      toast.success('Criterion removed.');
     },
-    onError: (err) => enqueueSnackbar(getApiErrorMessage(err, 'Unable to delete criterion.'), { variant: 'error' }),
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Unable to delete criterion.')),
   });
 
   const openCriterionDialog = (item = null) => {

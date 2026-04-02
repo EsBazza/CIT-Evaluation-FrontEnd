@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { enqueueSnackbar } from 'notistack';
+import { toast } from 'sonner';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -43,19 +43,19 @@ const ProfessorManager = ({ professors, loading, error, onRetry, sharedGridSx, c
     mutationFn: ({ id, payload }) => (id ? updateProfessor(id, payload) : createProfessor(payload)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-professors'] });
-      enqueueSnackbar(selectedProfessor ? 'Professor updated.' : 'Professor added.', { variant: 'success' });
+      toast.success(selectedProfessor ? 'Professor updated.' : 'Professor added.');
       closeProfessorDialog();
     },
-    onError: (err) => enqueueSnackbar(getApiErrorMessage(err, 'Unable to save professor.'), { variant: 'error' }),
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Unable to save professor.')),
   });
 
   const removeProfessorMutation = useMutation({
     mutationFn: (id) => deleteProfessor(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-professors'] });
-      enqueueSnackbar('Professor removed.', { variant: 'success' });
+      toast.success('Professor removed.');
     },
-    onError: (err) => enqueueSnackbar(getApiErrorMessage(err, 'Unable to delete professor.'), { variant: 'error' }),
+    onError: (err) => toast.error(getApiErrorMessage(err, 'Unable to delete professor.')),
   });
 
   const closeProfessorDialog = () => {

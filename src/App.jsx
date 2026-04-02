@@ -28,13 +28,22 @@ const brandColors = {
   error: '#dc2626',
   warning: '#b45309',
   info: '#0369a1',
-  background: '#f3f7fb',
+  background: 'linear-gradient(135deg, #f3f7fb 0%, #e2e8f0 100%)', // UPDATED: Modern Gradient
   backgroundAlt: '#eef3f9',
   paper: '#ffffff',
-  border: '#e2e8f0',
+  border: 'rgba(226, 232, 240, 0.8)', // UPDATED: Softer border for glass effect
   textPrimary: '#102a43',
   textSecondary: '#486581',
   muted: '#64748b',
+};
+
+// NEW: Glassmorphism Style Constant
+export const glassStyle = {
+  background: 'rgba(255, 255, 255, 0.7)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255, 255, 255, 0.3)',
+  boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.05)',
 };
 
 const baseTheme = createTheme({
@@ -46,7 +55,7 @@ const baseTheme = createTheme({
     error: { main: brandColors.error },
     warning: { main: brandColors.warning },
     info: { main: brandColors.info },
-    background: { default: brandColors.background, paper: brandColors.paper },
+    background: { default: '#f3f7fb', paper: brandColors.paper },
     divider: brandColors.border,
     text: { primary: brandColors.textPrimary, secondary: brandColors.textSecondary },
   },
@@ -65,7 +74,7 @@ const baseTheme = createTheme({
     overline: { fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' },
   },
   spacing: 8,
-  shape: { borderRadius: 12 },
+  shape: { borderRadius: 16 }, // UPDATED: Slightly rounder corners
   shadows: [
     'none',
     '0 1px 2px rgba(15, 23, 42, 0.08)',
@@ -97,13 +106,13 @@ const baseTheme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: brandColors.background,
+          background: brandColors.background, // Applies the gradient
+          backgroundAttachment: 'fixed',
           color: brandColors.textPrimary,
           margin: 0,
           fontSmooth: 'antialiased',
         },
         '*:focus-visible': {
-          // UI Update: strong visible keyboard focus for accessibility
           outline: `3px solid ${brandColors.secondary}`,
           outlineOffset: 2,
         },
@@ -133,7 +142,6 @@ const baseTheme = createTheme({
           },
         },
         containedPrimary: {
-          // UI Update: primary button hierarchy + brand color
           backgroundColor: brandColors.primary,
           '&:hover': { backgroundColor: '#0a3d73' },
         },
@@ -203,10 +211,8 @@ const getStoredSession = () => {
   if (typeof window === 'undefined') {
     return createEmptySession();
   }
-
   const stored = window.sessionStorage.getItem('citEvalSession');
   if (!stored) return createEmptySession();
-
   try {
     return JSON.parse(stored);
   } catch {
@@ -219,7 +225,6 @@ const App = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
     if (session.role) {
       window.sessionStorage.setItem('citEvalSession', JSON.stringify(session));
     } else {
@@ -255,7 +260,7 @@ const App = () => {
   };
 
   const suspenseFallback = (
-    <Paper elevation={0} sx={{ p: 4, borderRadius: 3, textAlign: 'center' }}>
+    <Paper sx={{ ...glassStyle, p: 4, textAlign: 'center' }}>
       <CircularProgress size={28} />
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
         Loading dashboard...
@@ -276,30 +281,31 @@ const App = () => {
   return (
     <ThemeProvider theme={appTheme}>
       <CssBaseline />
-      <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default', py: { xs: 2, md: 4 } }}>
+      <Box sx={{ minHeight: '100vh', py: { xs: 2, md: 4 } }}>
         {isAuthenticated ? (
           <>
             <Container maxWidth="lg">
               <Paper
                 elevation={0}
                 sx={{
+                  ...glassStyle, // UPDATED: Applied Glassmorphism
                   mb: 3,
-                  p: { xs: 3, md: 4 }, // UI Update: theme spacing scale
-                  borderRadius: 3,
-                  background: 'linear-gradient(138deg, rgba(12, 74, 138, 0.15), rgba(217, 119, 6, 0.12))',
-                  border: '1px solid rgba(12, 74, 138, 0.25)',
+                  p: { xs: 3, md: 4 },
+                  borderRadius: 4,
+                  // Added a subtle gradient overlay to the glass for brand feel
+                  backgroundImage: 'linear-gradient(138deg, rgba(12, 74, 138, 0.08), rgba(217, 119, 6, 0.05))',
                 }}
               >
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar src={sessionAvatar} sx={{ bgcolor: 'primary.main', width: 56, height: 56, fontWeight: 700 }}>
+                    <Avatar src={sessionAvatar} sx={{ bgcolor: 'primary.main', width: 56, height: 56, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                       {(session.email && session.email[0]?.toUpperCase()) || session.role?.charAt(0) || 'C'}
                     </Avatar>
                     <Box>
                       <Box
                         component="img"
                         src={uaLogo}
-                        alt="University of the Assumption logo"
+                        alt="UA logo"
                         sx={{ height: 26, mb: 0.5, display: 'block' }}
                       />
                       <Typography variant="overline" color="text.secondary" letterSpacing={1.2}>
@@ -314,10 +320,10 @@ const App = () => {
                     </Box>
                   </Stack>
                   <Stack direction="row" alignItems="center" spacing={1}>
-                    <Chip label={session.role} variant="outlined" color="secondary" sx={{ fontWeight: 700 }} />
+                    <Chip label={session.role} variant="outlined" color="secondary" sx={{ fontWeight: 700, bgcolor: 'rgba(217, 119, 6, 0.05)' }} />
                     <Tooltip title="Sign out">
-                      <IconButton onClick={handleLogout} size="large" sx={{ bgcolor: 'background.paper' }}>
-                        <LogoutIcon />
+                      <IconButton onClick={handleLogout} size="large" sx={{ bgcolor: 'white', '&:hover': { bgcolor: '#fee2e2' } }}>
+                        <LogoutIcon color="error" />
                       </IconButton>
                     </Tooltip>
                   </Stack>

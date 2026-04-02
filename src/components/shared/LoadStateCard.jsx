@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
-
+ 
 const LoadStateCard = ({
   icon,
   title,
@@ -12,19 +12,23 @@ const LoadStateCard = ({
   minHeight = 220,
 }) => {
   const accent = severity === 'error' ? '#dc2626' : severity === 'warning' ? '#b45309' : '#0c4a8a';
-
+ 
   return (
     <Paper
       elevation={0}
       sx={{
         p: 4,
         borderRadius: 3,
-        border: '1px dashed #cbd5e1',
         minHeight,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#ffffff',
+        // Glassmorphism
+        background: 'rgba(255, 255, 255, 0.6)',
+        backdropFilter: 'blur(12px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(160%)',
+        border: '1px dashed rgba(203, 213, 225, 0.7)',
+        boxShadow: '0 4px 24px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255,255,255,0.8)',
       }}
     >
       <Stack spacing={1.5} alignItems="center" textAlign="center" sx={{ maxWidth: 420 }}>
@@ -49,5 +53,6 @@ const LoadStateCard = ({
     </Paper>
   );
 };
-
+ 
 export default LoadStateCard;
+ 

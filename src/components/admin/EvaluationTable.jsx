@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Box, Button, Paper, Skeleton } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { useQueryClient } from '@tanstack/react-query';
-import { enqueueSnackbar } from 'notistack';
+import { toast } from 'sonner';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import LockIcon from '@mui/icons-material/Lock';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
@@ -30,9 +30,9 @@ const EvaluationTable = ({ evaluations, loading, error, onRetry, sharedGridSx, c
         prev.map((item) => (item.id === id ? { ...item, ciphertext: decryptedText } : item))
       );
       setDecryptedRows((prev) => ({ ...prev, [id]: true }));
-      enqueueSnackbar('Feedback decrypted.', { variant: 'success' });
+      toast.success('Feedback decrypted.');
     } catch (err) {
-      enqueueSnackbar(getApiErrorMessage(err, 'Decryption failed.'), { variant: 'error' });
+      toast.error(getApiErrorMessage(err, 'Decryption failed.'));
     } finally {
       setDecryptingId(null);
     }
