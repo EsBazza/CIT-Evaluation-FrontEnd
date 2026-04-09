@@ -34,12 +34,12 @@ const Login = ({ onLogin }) => {
   const handleGoogleSuccess = async (googleResponse) => {
     try {
       await apiClient.post('/api/public/sync-user', {
-        idToken: googleResponse.credential 
+        idToken: googleResponse.credential
       });
       return true;
     } catch (err) {
-      console.error("Profile sync failed, but proceeding with login session.", err);
-      return true;
+      console.error("Profile sync failed.", err);
+      throw err;
     }
   };
 
@@ -61,8 +61,8 @@ const Login = ({ onLogin }) => {
         return;
       }
       onLogin(role, decoded.email, null, decoded.picture);
-    } catch {
-      setError('Google authentication failed. Please try again.');
+    } catch (err) {
+      setError('Google authentication or profile synchronization failed. Please try again.');
     }
   };
 
