@@ -20,6 +20,48 @@ const ensureArrayResponse = (value) => {
   return [];
 };
 
+const getFilenameFromDisposition = (disposition, fallback) => {
+  if (!disposition) {
+    return fallback;
+  }
+
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+  if (plainMatch?.[1]) {
+    return plainMatch[1];
+  }
+
+  return fallback;
+};
+
+const triggerBrowserDownload = (blob, filename) => {
+  const href = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(href);
+};
+
+const downloadFile = async (url, fallbackFilename, params) => {
+  const response = await apiClient.get(url, {
+    params,
+    responseType: 'blob',
+  });
+
+  const disposition = response?.headers?.['content-disposition'];
+  const filename = getFilenameFromDisposition(disposition, fallbackFilename);
+  const blob = response?.data instanceof Blob ? response.data : new Blob([response?.data]);
+  triggerBrowserDownload(blob, filename);
+  return filename;
+};
+
 export const fetchEvaluationsAdmin = async () => {
   const { data } = await apiClient.get('/api/evaluations');
   return ensureArrayResponse(data);
@@ -29,6 +71,30 @@ export const decryptEvaluation = async (id, facultyEmail) => {
   const params = facultyEmail ? { facultyEmail } : undefined;
   const { data } = await apiClient.get(`/api/evaluations/${id}/decrypt`, { params });
   return data;
+};
+
+export const exportAllEvaluationsCsv = async () => {
+  return downloadFile('/api/evaluations/export/csv', 'all_evaluations.csv');
+};
+
+export const exportAllEvaluationsPdf = async () => {
+  return downloadFile('/api/evaluations/export/pdf', 'all_evaluations.pdf');
+};
+
+export const exportFacultyEvaluationsCsv = async (facultyEmail) => {
+  return downloadFile('/api/evaluations/export/faculty/csv', `faculty_evaluations_${facultyEmail}.csv`, { facultyEmail });
+};
+
+export const exportFacultyEvaluationsPdf = async (facultyEmail) => {
+  return downloadFile('/api/evaluations/export/faculty/pdf', `faculty_evaluations_${facultyEmail}.pdf`, { facultyEmail });
+};
+
+export const exportSingleEvaluationCsv = async (id) => {
+  return downloadFile(`/api/evaluations/${id}/export/csv`, `evaluation_${id}.csv`);
+};
+
+export const exportSingleEvaluationPdf = async (id) => {
+  return downloadFile(`/api/evaluations/${id}/export/pdf`, `evaluation_${id}.pdf`);
 };
 
 export const fetchProfessors = async () => {

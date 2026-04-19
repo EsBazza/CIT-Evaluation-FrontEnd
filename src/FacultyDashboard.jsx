@@ -1,6 +1,12 @@
 import React, { lazy, Suspense, useEffect, useState, useMemo, useCallback } from 'react';
 import { apiClient } from './shared/api/client';
-import { decryptEvaluation } from './shared/api/adminApi';
+import {
+    decryptEvaluation,
+    exportFacultyEvaluationsCsv,
+    exportFacultyEvaluationsPdf,
+    exportSingleEvaluationCsv,
+    exportSingleEvaluationPdf,
+} from './shared/api/adminApi';
 import {
     Alert,
     Box,
@@ -26,8 +32,13 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import SecurityIcon from '@mui/icons-material/Security';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import DownloadIcon from '@mui/icons-material/Download';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import TableViewIcon from '@mui/icons-material/TableView';
 import uaLogo from './assets/UA-Logo.png';
 import LoadStateCard from './components/shared/LoadStateCard';
+import { toast } from 'sonner';
+import { getApiErrorMessage } from './shared/api/client';
 
 const FacultyAnalyticsCharts = lazy(() => import('./components/faculty/FacultyAnalyticsCharts'));
 
@@ -43,6 +54,8 @@ const FacultyDashboard = ({ facultyEmail, facultyAvatar, previewMode = false, on
     const [loading, setLoading] = useState(false);
     const [decrypting, setDecrypting] = useState(false);
     const [error, setError] = useState('');
+    const [exportingAllFormat, setExportingAllFormat] = useState('');
+    const [exportingEvaluation, setExportingEvaluation] = useState({});
 
     // UA Branding Colors
     const UA_BLUE = '#003366';
@@ -111,6 +124,51 @@ const FacultyDashboard = ({ facultyEmail, facultyAvatar, previewMode = false, on
     useEffect(() => {
         fetchAndDecryptEvaluations();
     }, [fetchAndDecryptEvaluations]);
+
+    const setEvaluationExporting = (id, format, isExporting) => {
+        const key = `${id}-${format}`;
+        setExportingEvaluation((prev) => ({
+            ...prev,
+            [key]: isExporting,
+        }));
+    };
+
+    const handleExportAll = async (format) => {
+        if (!facultyEmail) {
+            toast.error('Faculty email is unavailable. Please log in again.');
+            return;
+        }
+
+        setExportingAllFormat(format);
+        try {
+            if (format === 'csv') {
+                await exportFacultyEvaluationsCsv(facultyEmail);
+            } else {
+                await exportFacultyEvaluationsPdf(facultyEmail);
+            }
+            toast.success(`Your evaluations were exported as ${format.toUpperCase()}.`);
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, `Failed to export ${format.toUpperCase()}.`));
+        } finally {
+            setExportingAllFormat('');
+        }
+    };
+
+    const handleExportSingle = async (evaluationId, format) => {
+        setEvaluationExporting(evaluationId, format, true);
+        try {
+            if (format === 'csv') {
+                await exportSingleEvaluationCsv(evaluationId);
+            } else {
+                await exportSingleEvaluationPdf(evaluationId);
+            }
+            toast.success(`Evaluation #${evaluationId} exported as ${format.toUpperCase()}.`);
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, `Failed to export evaluation as ${format.toUpperCase()}.`));
+        } finally {
+            setEvaluationExporting(evaluationId, format, false);
+        }
+    };
 
     const stats = useMemo(() => {
         if (evals.length === 0) return { avg: 0, count: 0 };
@@ -197,23 +255,45 @@ const FacultyDashboard = ({ facultyEmail, facultyAvatar, previewMode = false, on
                         </Box>
                     </Stack>
 
-                    <Button
-                        startIcon={<RefreshIcon />}
-                        variant="contained"
-                        onClick={fetchAndDecryptEvaluations}
-                        disabled={loading || decrypting}
-                        aria-label="Refresh faculty evaluation results"
-                        sx={{
-                            borderRadius: 2,
-                            fontWeight: 800,
-                            bgcolor: UA_GOLD,
-                            color: UA_BLUE,
-                            '&:hover': { bgcolor: '#e6b800' },
-                            px: 3
-                        }}
-                    >
-                        {loading || decrypting ? 'Refreshing...' : 'Refresh Results'}
-                    </Button>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                        <Button
+                            startIcon={<RefreshIcon />}
+                            variant="contained"
+                            onClick={fetchAndDecryptEvaluations}
+                            disabled={loading || decrypting}
+                            aria-label="Refresh faculty evaluation results"
+                            sx={{
+                                borderRadius: 2,
+                                fontWeight: 800,
+                                bgcolor: UA_GOLD,
+                                color: UA_BLUE,
+                                '&:hover': { bgcolor: '#e6b800' },
+                                px: 3
+                            }}
+                        >
+                            {loading || decrypting ? 'Refreshing...' : 'Refresh Results'}
+                        </Button>
+
+                        <Button
+                            startIcon={<TableViewIcon />}
+                            variant="outlined"
+                            onClick={() => handleExportAll('csv')}
+                            disabled={Boolean(exportingAllFormat)}
+                            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
+                        >
+                            {exportingAllFormat === 'csv' ? 'Exporting CSV...' : 'Export CSV'}
+                        </Button>
+
+                        <Button
+                            startIcon={<PictureAsPdfIcon />}
+                            variant="outlined"
+                            onClick={() => handleExportAll('pdf')}
+                            disabled={Boolean(exportingAllFormat)}
+                            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
+                        >
+                            {exportingAllFormat === 'pdf' ? 'Exporting PDF...' : 'Export PDF'}
+                        </Button>
+                    </Stack>
                 </Stack>
             </Paper>
 
@@ -365,6 +445,26 @@ const FacultyDashboard = ({ facultyEmail, facultyAvatar, previewMode = false, on
                                                     <Typography component="span" variant="caption" sx={{ ml: 0.5 }}>/10</Typography>
                                                 </Typography>
                                                 <Rating value={metricAverage / 2} size="small" readOnly />
+                                                <Stack direction="row" spacing={0.75} sx={{ mt: 1, justifyContent: 'flex-end' }}>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        startIcon={<DownloadIcon fontSize="small" />}
+                                                        onClick={() => handleExportSingle(ev.id, 'csv')}
+                                                        disabled={Boolean(exportingEvaluation[`${ev.id}-csv`]) || Boolean(exportingEvaluation[`${ev.id}-pdf`])}
+                                                    >
+                                                        {exportingEvaluation[`${ev.id}-csv`] ? 'CSV...' : 'CSV'}
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        startIcon={<DownloadIcon fontSize="small" />}
+                                                        onClick={() => handleExportSingle(ev.id, 'pdf')}
+                                                        disabled={Boolean(exportingEvaluation[`${ev.id}-csv`]) || Boolean(exportingEvaluation[`${ev.id}-pdf`])}
+                                                    >
+                                                        {exportingEvaluation[`${ev.id}-pdf`] ? 'PDF...' : 'PDF'}
+                                                    </Button>
+                                                </Stack>
                                             </Box>
                                         </Stack>
 

@@ -6,7 +6,12 @@ import { toast } from 'sonner';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import LockIcon from '@mui/icons-material/Lock';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
-import { decryptEvaluation } from '../../shared/api/adminApi';
+import DownloadIcon from '@mui/icons-material/Download';
+import {
+  decryptEvaluation,
+  exportSingleEvaluationCsv,
+  exportSingleEvaluationPdf,
+} from '../../shared/api/adminApi';
 import { getApiErrorMessage } from '../../shared/api/client';
 import LoadStateCard from '../shared/LoadStateCard';
 
@@ -20,6 +25,7 @@ const EvaluationTable = ({ evaluations, loading, error, onRetry, sharedGridSx, c
   const queryClient = useQueryClient();
   const [decryptingId, setDecryptingId] = useState(null);
   const [decryptedRows, setDecryptedRows] = useState({});
+  const [exportingRows, setExportingRows] = useState({});
 
   const handleDecrypt = async (id) => {
     if (!id) return;
@@ -35,6 +41,31 @@ const EvaluationTable = ({ evaluations, loading, error, onRetry, sharedGridSx, c
       toast.error(getApiErrorMessage(err, 'Decryption failed.'));
     } finally {
       setDecryptingId(null);
+    }
+  };
+
+  const setRowExporting = (id, format, isExporting) => {
+    const key = `${id}-${format}`;
+    setExportingRows((prev) => ({
+      ...prev,
+      [key]: isExporting,
+    }));
+  };
+
+  const handleExport = async (id, format) => {
+    if (!id) return;
+    setRowExporting(id, format, true);
+    try {
+      if (format === 'csv') {
+        await exportSingleEvaluationCsv(id);
+      } else {
+        await exportSingleEvaluationPdf(id);
+      }
+      toast.success(`Evaluation #${id} exported as ${format.toUpperCase()}.`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, `Failed to export ${format.toUpperCase()}.`));
+    } finally {
+      setRowExporting(id, format, false);
     }
   };
 
@@ -128,8 +159,42 @@ const EvaluationTable = ({ evaluations, loading, error, onRetry, sharedGridSx, c
           );
         },
       },
+      {
+        field: 'exports',
+        headerName: 'Exports',
+        width: 220,
+        sortable: false,
+        renderCell: (params) => {
+          const rowId = params?.row?.id;
+          const exportingCsv = Boolean(rowId && exportingRows[`${rowId}-csv`]);
+          const exportingPdf = Boolean(rowId && exportingRows[`${rowId}-pdf`]);
+
+          return (
+            <Box sx={{ display: 'flex', gap: 0.75 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<DownloadIcon fontSize="small" />}
+                onClick={() => rowId && handleExport(rowId, 'csv')}
+                disabled={!rowId || exportingCsv || exportingPdf}
+              >
+                {exportingCsv ? 'CSV...' : 'CSV'}
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<DownloadIcon fontSize="small" />}
+                onClick={() => rowId && handleExport(rowId, 'pdf')}
+                disabled={!rowId || exportingCsv || exportingPdf}
+              >
+                {exportingPdf ? 'PDF...' : 'PDF'}
+              </Button>
+            </Box>
+          );
+        },
+      },
     ],
-    [decryptedRows, decryptingId]
+    [decryptedRows, decryptingId, exportingRows]
   );
 
   return (

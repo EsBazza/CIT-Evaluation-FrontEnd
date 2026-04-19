@@ -48,6 +48,28 @@ const calcAverage = (scores = []) => {
   return total / scores.length;
 };
 
+const resolveCriterionLabel = (scoreItem) => {
+  const rawLabel =
+    scoreItem?.criterionName ||
+    scoreItem?.criterionTitle ||
+    scoreItem?.criterion?.title ||
+    scoreItem?.criterion;
+
+  if (typeof rawLabel === 'string' && rawLabel.trim()) {
+    return rawLabel.trim();
+  }
+
+  const criterionId = scoreItem?.criterionId;
+  return criterionId ? `Criterion ${criterionId}` : 'Unlabeled Criterion';
+};
+
+const shortenLabel = (value, maxLength = 26) => {
+  if (!value || value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength)}...`;
+};
+
 const SummaryCard = ({ title, value, detail, icon, color = 'primary.main' }) => (
   <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', height: '100%' }}>
     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
@@ -144,23 +166,33 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
 
   // NEW: Logical data for the Radar Chart
   const performanceCriteriaData = useMemo(() => {
-    const criteriaMap = {};
-    
-    filteredEvaluations.forEach(ev => {
-        ev.scores?.forEach(s => {
-            if (!criteriaMap[s.criterion]) {
-                criteriaMap[s.criterion] = { subject: s.criterion, fullMark: 10, total: 0, count: 0 };
-            }
-            criteriaMap[s.criterion].total += Number(s.score) || 0;
-            criteriaMap[s.criterion].count += 1;
-        });
+    const criteriaMap = new Map();
+
+    filteredEvaluations.forEach((ev) => {
+      const scores = Array.isArray(ev?.scores) ? ev.scores : [];
+
+      scores.forEach((scoreItem) => {
+        const criterionLabel = resolveCriterionLabel(scoreItem);
+        if (!criteriaMap.has(criterionLabel)) {
+          criteriaMap.set(criterionLabel, {
+            subject: criterionLabel,
+            total: 0,
+            count: 0,
+          });
+        }
+
+        const entry = criteriaMap.get(criterionLabel);
+        entry.total += Number(scoreItem?.score) || 0;
+        entry.count += 1;
+      });
     });
 
-    return Object.values(criteriaMap).map(c => ({
-        subject: c.subject,
-        A: Number((c.total / c.count).toFixed(2)),
-        fullMark: 10
-    }));
+    return Array.from(criteriaMap.values())
+      .map((criterionItem) => ({
+        subject: shortenLabel(criterionItem.subject),
+        average: Number((criterionItem.total / Math.max(criterionItem.count, 1)).toFixed(2)),
+      }))
+      .sort((a, b) => b.average - a.average);
   }, [filteredEvaluations]);
 
   const pieData = useMemo(() => {
@@ -337,30 +369,39 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
       {/* New Visual Section: Radar Chart and Ranking List */}
       <Grid container spacing={2}>
         <Grid item xs={12} md={6}>
-            <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', height: 460 }}>
+          <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', minHeight: 460 }}>
                 <Typography variant="subtitle1" fontWeight={750} sx={{ mb: 1 }}>
                     Performance competency
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     Spider chart showing average scores across evaluation criteria.
                 </Typography>
-                <Box sx={{ width: '100%', height: 350 }}>
-                    <ResponsiveContainer>
-                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceCriteriaData}>
-                            <PolarGrid stroke="#e2e8f0" />
-                            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 600 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 10]} />
-                            <Radar
-                                name="Average Competency"
-                                dataKey="A"
-                                stroke="#0c4a8a"
-                                fill="#0c4a8a"
-                                fillOpacity={0.5}
-                            />
-                            <Tooltip />
-                        </RadarChart>
-                    </ResponsiveContainer>
-                </Box>
+            {performanceCriteriaData.length > 0 ? (
+              <Box sx={{ width: '100%', height: 350 }}>
+                <ResponsiveContainer>
+                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceCriteriaData}>
+                    <PolarGrid stroke="#e2e8f0" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 600 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 10]} tickCount={6} />
+                    <Radar
+                      name="Average Competency"
+                      dataKey="average"
+                      stroke="#0c4a8a"
+                      fill="#0c4a8a"
+                      fillOpacity={0.5}
+                    />
+                    <Tooltip />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </Box>
+            ) : (
+              <LoadStateCard
+              icon={<InsightsRoundedIcon sx={{ fontSize: 42 }} />}
+              title="No criterion data yet"
+              description="This chart will populate as soon as scored criteria are submitted."
+              minHeight={300}
+              />
+            )}
             </Paper>
         </Grid>
 

@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Autocomplete,
   Container,
@@ -22,9 +21,12 @@ import {
   Zoom,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { ShieldCheck, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+  exportAllEvaluationsCsv,
+  exportAllEvaluationsPdf,
   fetchCriteria,
   fetchEvaluationsAdmin,
   fetchProfessors,
@@ -69,6 +71,7 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
   const token = adminToken || sessionStorage.getItem('adminToken');
   const [facultyPreviewOpen, setFacultyPreviewOpen] = useState(false);
   const [selectedFacultyPreview, setSelectedFacultyPreview] = useState(null);
+  const [exportingAllFormat, setExportingAllFormat] = useState('');
  
   const [activeTab, setActiveTab] = useState(TAB_INDEX.OVERVIEW);
   const [error, setError] = useState('');
@@ -213,6 +216,22 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
       closeFacultyPreview();
     }
   };
+
+  const handleExportAll = async (format) => {
+    setExportingAllFormat(format);
+    try {
+      if (format === 'csv') {
+        await exportAllEvaluationsCsv();
+      } else {
+        await exportAllEvaluationsPdf();
+      }
+      toast.success(`All evaluations exported as ${format.toUpperCase()}.`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, `Unable to export ${format.toUpperCase()} right now.`));
+    } finally {
+      setExportingAllFormat('');
+    }
+  };
  
   return (
     <Container maxWidth="lg" sx={{ mt: 3 }}>
@@ -230,25 +249,51 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
               <Typography variant="h4" fontWeight={800} color="primary.main">Admin Control Center</Typography>
               <Typography variant="body2" color="text.secondary">Manage encrypted evaluations, professors, criteria, and analytics.</Typography>
             </Box>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Chip
-                icon={<ShieldCheck size={16} />}
-                label="Encrypted by default"
-                color="success"
-                variant="outlined"
-              />
-
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              sx={{
+                width: { xs: '100%', md: 'auto' },
+                flexWrap: { xs: 'nowrap', sm: 'wrap' },
+                justifyContent: { sm: 'flex-end' },
+              }}
+            >
               <Button
                 startIcon={<RefreshCw size={16} />}
                 endIcon={isRefreshing ? <CircularProgress size={16} color="inherit" /> : null}
                 variant="outlined"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 {refreshButtonLabel}
               </Button>
 
-              <Button variant="contained" onClick={openFacultyPreview} disabled={professorRows.length === 0}>
+              <Button
+                variant="outlined"
+                onClick={() => handleExportAll('csv')}
+                disabled={Boolean(exportingAllFormat)}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                {exportingAllFormat === 'csv' ? 'Exporting CSV...' : 'Export CSV'}
+              </Button>
+
+              <Button
+                variant="outlined"
+                onClick={() => handleExportAll('pdf')}
+                disabled={Boolean(exportingAllFormat)}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                {exportingAllFormat === 'pdf' ? 'Exporting PDF...' : 'Export PDF'}
+              </Button>
+
+              <Button
+                variant="contained"
+                onClick={openFacultyPreview}
+                disabled={professorRows.length === 0}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
                 Preview faculty page
               </Button>
             </Stack>
