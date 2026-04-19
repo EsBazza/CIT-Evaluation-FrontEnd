@@ -131,7 +131,7 @@ const Login = ({ onLogin }) => {
             component="img"
             src={uaLogo}
             alt="University of the Assumption logo"
-            sx={{ height: { xs: 48, sm: 64 }, width: 'auto', mb: 2 }}
+            sx={{ height: { xs: 64, sm: 96 }, width: 'auto', mb: 2 }}
           />
 
           <Stack 
