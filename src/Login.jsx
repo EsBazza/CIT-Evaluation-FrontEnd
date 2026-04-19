@@ -96,11 +96,11 @@ const Login = ({ onLogin }) => {
   return (
     <Box 
       sx={{ 
-        minHeight: '100vh', 
+        position: 'fixed',
+        inset: 0,
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        position: 'relative',
         '&::before': {
           content: '""',
           position: 'absolute',

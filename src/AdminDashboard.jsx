@@ -46,7 +46,6 @@ const TAB_INDEX = {
   CRITERIA: 3,
 };
  
-// ─── Animation variants ───────────────────────────────────────────────────────
 const tabPanelVariants = {
   enter: { opacity: 0, y: 14 },
   center: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } },
@@ -72,7 +71,6 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
   const [facultyPreviewOpen, setFacultyPreviewOpen] = useState(false);
   const [selectedFacultyPreview, setSelectedFacultyPreview] = useState(null);
   const [exportingAllFormat, setExportingAllFormat] = useState('');
- 
   const [activeTab, setActiveTab] = useState(TAB_INDEX.OVERVIEW);
   const [error, setError] = useState('');
  
@@ -234,16 +232,20 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
   };
  
   return (
-    <Container maxWidth="lg" sx={{ mt: 3 }}>
-      <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid #dfe3ec' }}>
+    // ── fix 1: mt: 3 → mt: 2 ─────────────────────────────────────────────────
+    <Container maxWidth="lg" sx={{ mt: 2 }}>
+      {/* ── fix 2: p: { xs: 3, md: 4 } → p: { xs: 2.5, md: 3 } ────────────── */}
+      <Paper elevation={0} sx={{ p: { xs: 2.5, md: 3 }, borderRadius: 4, border: '1px solid #dfe3ec' }}>
+
         {/* Header */}
         <motion.div variants={headerVariants} initial="hidden" animate="visible">
           <Stack
             direction={{ xs: 'column', md: 'row' }}
             justifyContent="space-between"
             alignItems={{ xs: 'flex-start', md: 'center' }}
-            spacing={2}
-            sx={{ mb: 3 }}
+            // ── fix 3: spacing: 2 → 1.5, mb: 3 → mb: 2 ──────────────────────
+            spacing={1.5}
+            sx={{ mb: 2 }}
           >
             <Box>
               <Typography variant="h4" fontWeight={800} color="primary.main">Admin Control Center</Typography>
@@ -307,12 +309,13 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
         )}
  
         <Fade in timeout={260}>
-          <Stack spacing={3} sx={{ mb: 3 }}>
+          {/* ── fix 4: spacing: 3 → 2, mb: 3 → mb: 2 ────────────────────────── */}
+          <Stack spacing={2} sx={{ mb: 2 }}>
             {/* Summary Stat Cards */}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" justifyContent="space-between">
               {isBootstrapping
                 ? [1, 2, 3].map((placeholder) => (
-                    <Paper key={placeholder} elevation={0} sx={{ ...cardSurfaceSx, flex: '1 1 180px', minWidth: 180, p: 2.25 }}>
+                    <Paper key={placeholder} elevation={0} sx={{ ...cardSurfaceSx, flex: '1 1 180px', minWidth: 180, p: 2.5 }}>
                       <Skeleton variant="text" width="60%" height={18} />
                       <Skeleton variant="text" width="35%" height={44} />
                       <Skeleton variant="text" width="70%" height={18} />
@@ -327,7 +330,8 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
                       animate="visible"
                       style={{ flex: '1 1 180px', minWidth: 180 }}
                     >
-                      <Paper elevation={0} sx={{ ...cardSurfaceSx, p: 2.25, height: '100%' }}>
+                      {/* ── fix 5: p: 2.25 → p: 2.5 ───────────────────────── */}
+                      <Paper elevation={0} sx={{ ...cardSurfaceSx, p: 2.5, height: '100%' }}>
                         <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.12em' }}>
                           {stat.label}
                         </Typography>
@@ -364,7 +368,7 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
           </Stack>
         </Fade>
  
-        {/* Tab Panels with AnimatePresence */}
+        {/* Tab Panels */}
         <AnimatePresence mode="wait">
           {activeTab === TAB_INDEX.OVERVIEW && (
             <motion.div

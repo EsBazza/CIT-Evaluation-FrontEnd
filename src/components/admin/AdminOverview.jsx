@@ -70,8 +70,9 @@ const shortenLabel = (value, maxLength = 26) => {
   return `${value.slice(0, maxLength)}...`;
 };
 
+// ── fix 1: uniform padding p: 2.5 (was 2.2) ──────────────────────────────────
 const SummaryCard = ({ title, value, detail, icon, color = 'primary.main' }) => (
-  <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', height: '100%' }}>
+  <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, border: '1px solid #e2e8f0', height: '100%' }}>
     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
       <Box>
         <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.1em' }}>
@@ -141,7 +142,7 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
 
     filteredEvaluations.forEach((ev) => {
       const email = ev?.facultyEmail || 'unknown@ua.edu.ph';
-      const displayName = professorNameByEmail.get(email) || email;
+      const displayName = professorNameByEmail.get(email) || ev?.facultyName || 'Unknown Faculty';
       const avg = calcAverage(ev?.scores);
 
       if (!map.has(email)) {
@@ -164,7 +165,6 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
       });
   }, [filteredEvaluations, professorNameByEmail]);
 
-  // NEW: Logical data for the Radar Chart
   const performanceCriteriaData = useMemo(() => {
     const criteriaMap = new Map();
 
@@ -228,12 +228,13 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
   }
 
   return (
-    <Stack spacing={2.5}>
+    <Stack spacing={2}>
+      {/* ── fix 2: spacing 1.5 (was 2) for tighter header rhythm ── */}
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         alignItems={{ xs: 'stretch', md: 'center' }}
         justifyContent="space-between"
-        spacing={2}
+        spacing={1.5}
       >
         <Box>
           <Typography variant="h5" fontWeight={850} color="primary.main">
@@ -244,7 +245,8 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
           </Typography>
         </Box>
 
-        <FormControl size="small" sx={{ minWidth: 160, maxWidth: 240 }}>
+        {/* ── fix 3: removed maxWidth: 240 so filter doesn't pinch on mid screens ── */}
+        <FormControl size="small" sx={{ minWidth: 160 }}>
           <InputLabel id="admin-overview-section-filter">Section</InputLabel>
           <Select
             labelId="admin-overview-section-filter"
@@ -292,7 +294,7 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
         <Grid item xs={12} sm={6} lg={3}>
           <SummaryCard
             title="Best Teacher"
-            value={bestTeacher ? bestTeacher.avgScore : '-'}
+            value={bestTeacher ? bestTeacher.avgScore : 0}
             detail={bestTeacher ? bestTeacher.name : 'No ranking yet'}
             icon={<EmojiEventsRoundedIcon />}
             color="#b45309"
@@ -302,7 +304,7 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
 
       <Grid container spacing={2}>
         <Grid item xs={12} lg={7}>
-          <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', height: 360 }}>
+          <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid #e2e8f0', height: 360 }}>
             <Typography variant="subtitle1" fontWeight={750} sx={{ mb: 1 }}>
               Section Score Trend
             </Typography>
@@ -333,7 +335,7 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
         </Grid>
 
         <Grid item xs={12} lg={5}>
-          <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', height: 360 }}>
+          <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid #e2e8f0', height: 360 }}>
             <Typography variant="subtitle1" fontWeight={750} sx={{ mb: 1 }}>
               Teacher Evaluation Share
             </Typography>
@@ -366,18 +368,18 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
         </Grid>
       </Grid>
 
-      {/* New Visual Section: Radar Chart and Ranking List */}
       <Grid container spacing={2}>
         <Grid item xs={12} md={6}>
-          <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', minHeight: 460 }}>
-                <Typography variant="subtitle1" fontWeight={750} sx={{ mb: 1 }}>
-                    Performance competency
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Spider chart showing average scores across evaluation criteria.
-                </Typography>
+          {/* ── fix 4: height: 460 (was minHeight) so both bottom cards are equal height ── */}
+          <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid #e2e8f0', height: 460 }}>
+            <Typography variant="subtitle1" fontWeight={750} sx={{ mb: 1 }}>
+              Performance competency
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
+              Spider chart showing average scores across evaluation criteria.
+            </Typography>
             {performanceCriteriaData.length > 0 ? (
-              <Box sx={{ width: '100%', height: 350 }}>
+              <Box sx={{ width: '100%', height: 330 }}>
                 <ResponsiveContainer>
                   <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceCriteriaData}>
                     <PolarGrid stroke="#e2e8f0" />
@@ -396,53 +398,54 @@ const AdminOverview = ({ evaluations = [], professors = [] }) => {
               </Box>
             ) : (
               <LoadStateCard
-              icon={<InsightsRoundedIcon sx={{ fontSize: 42 }} />}
-              title="No criterion data yet"
-              description="This chart will populate as soon as scored criteria are submitted."
-              minHeight={300}
+                icon={<InsightsRoundedIcon sx={{ fontSize: 42 }} />}
+                title="No criterion data yet"
+                description="This chart will populate as soon as scored criteria are submitted."
+                minHeight={300}
               />
             )}
-            </Paper>
+          </Paper>
         </Grid>
 
         <Grid item xs={12} md={6}>
-            <Paper elevation={0} sx={{ p: 2.2, borderRadius: 3, border: '1px solid #e2e8f0', height: 460, overflowY: 'auto' }}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1.2} sx={{ mb: 1 }}>
-                <Typography variant="subtitle1" fontWeight={800} color="primary.main">
-                    Faculty Ranking
-                </Typography>
-                <Chip
-                    color="secondary"
-                    variant="outlined"
-                    icon={<EmojiEventsRoundedIcon />}
-                    size="small"
-                    label={bestTeacher ? `Top: ${bestTeacher.name}` : 'No ranked teacher'}
-                />
-                </Stack>
+          <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid #e2e8f0', height: 460, overflowY: 'auto' }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1.2} sx={{ mb: 1 }}>
+              <Typography variant="subtitle1" fontWeight={800} color="primary.main">
+                Faculty Ranking
+              </Typography>
+              <Chip
+                color="secondary"
+                variant="outlined"
+                icon={<EmojiEventsRoundedIcon />}
+                size="small"
+                label={bestTeacher ? `Top: ${bestTeacher.name}` : 'No ranked teacher'}
+              />
+            </Stack>
 
-                <List disablePadding>
-                {teacherRanking.slice(0, 8).map((teacher, index) => (
-                    <ListItem
-                    key={teacher.email}
-                    sx={{
-                        px: 0,
-                        py: 1,
-                        borderTop: index === 0 ? 'none' : '1px solid #f1f5f9',
-                    }}
-                    >
-                    <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: index === 0 ? '#d97706' : '#0c4a8a', width: 32, height: 32, fontSize: '0.875rem' }}>{index + 1}</Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                        primary={teacher.name}
-                        primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
-                        secondary={`${teacher.responses} response${teacher.responses === 1 ? '' : 's'}`}
-                    />
-                    <Chip label={`${teacher.avgScore.toFixed(2)}`} color={index === 0 ? 'warning' : 'default'} size="small" />
-                    </ListItem>
-                ))}
-                </List>
-            </Paper>
+            <List disablePadding>
+              {teacherRanking.slice(0, 8).map((teacher, index) => (
+                <ListItem
+                  key={teacher.email}
+                  sx={{
+                    px: 0,
+                    py: 1,
+                    // ── fix 6: consistent divider on every row, including the first ──
+                    borderTop: '1px solid #f1f5f9',
+                  }}
+                >
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: index === 0 ? '#d97706' : '#0c4a8a', width: 32, height: 32, fontSize: '0.875rem' }}>{index + 1}</Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={teacher.name}
+                    primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
+                    secondary={`${teacher.responses} response${teacher.responses === 1 ? '' : 's'}`}
+                  />
+                  <Chip label={`${teacher.avgScore.toFixed(2)}`} color={index === 0 ? 'warning' : 'default'} size="small" />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
         </Grid>
       </Grid>
     </Stack>
