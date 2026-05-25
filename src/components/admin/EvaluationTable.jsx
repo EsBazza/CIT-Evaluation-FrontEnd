@@ -3,115 +3,49 @@ import { Box, Button, Paper, Skeleton } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
-import LockIcon from '@mui/icons-material/Lock';
-import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
-import DownloadIcon from '@mui/icons-material/Download';
-import {
-  decryptEvaluation,
-  exportSingleEvaluationCsv,
-  exportSingleEvaluationPdf,
-} from '../../shared/api/adminApi';
+import { decryptEvaluation } from '../../shared/api/adminApi';
 import { getApiErrorMessage } from '../../shared/api/client';
 import LoadStateCard from '../shared/LoadStateCard';
 
-const computeMetricAverage = (scores = []) => {
-  if (!Array.isArray(scores) || scores.length === 0) return 0;
-  const total = scores.reduce((sum, item) => sum + (Number(item?.score) || 0), 0);
-  return total / scores.length;
+const computeMetricAverage = (answers = []) => {
+  if (!Array.isArray(answers) || answers.length === 0) return 0;
+  const numericAnswers = answers.filter(a => a?.score !== null && a?.score !== undefined);
+  if (numericAnswers.length === 0) return 0;
+  const total = numericAnswers.reduce((sum, item) => sum + (Number(item?.score) || 0), 0);
+  return total / numericAnswers.length;
 };
 
 const EvaluationTable = ({ evaluations, loading, error, onRetry, sharedGridSx, cardSurfaceSx }) => {
   const queryClient = useQueryClient();
-  const [decryptingId, setDecryptingId] = useState(null);
   const [decryptedRows, setDecryptedRows] = useState({});
-  const [exportingRows, setExportingRows] = useState({});
+  const [decryptingIds, setDecryptingIds] = useState({});
 
   const handleDecrypt = async (id) => {
-    if (!id) return;
-    setDecryptingId(id);
+    setDecryptingIds((prev) => ({ ...prev, [id]: true }));
     try {
-      const decryptedText = await decryptEvaluation(id);
-      queryClient.setQueryData(['admin-evaluations'], (prev = []) =>
-        prev.map((item) => (item.id === id ? { ...item, ciphertext: decryptedText } : item))
-      );
-      setDecryptedRows((prev) => ({ ...prev, [id]: true }));
+      const plaintext = await decryptEvaluation(id);
+      setDecryptedRows((prev) => ({ ...prev, [id]: plaintext }));
       toast.success('Feedback decrypted.');
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Decryption failed.'));
     } finally {
-      setDecryptingId(null);
-    }
-  };
-
-  const setRowExporting = (id, format, isExporting) => {
-    const key = `${id}-${format}`;
-    setExportingRows((prev) => ({
-      ...prev,
-      [key]: isExporting,
-    }));
-  };
-
-  const handleExport = async (id, format) => {
-    if (!id) return;
-    setRowExporting(id, format, true);
-    try {
-      if (format === 'csv') {
-        await exportSingleEvaluationCsv(id);
-      } else {
-        await exportSingleEvaluationPdf(id);
-      }
-      toast.success(`Evaluation #${id} exported as ${format.toUpperCase()}.`);
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, `Failed to export ${format.toUpperCase()}.`));
-    } finally {
-      setRowExporting(id, format, false);
+      setDecryptingIds((prev) => ({ ...prev, [id]: false }));
     }
   };
 
   const columns = useMemo(
     () => [
-      {
-        field: 'studentEmail',
-        headerName: 'Student Email',
-        flex: 1,
-        minWidth: 180,
-        valueGetter: (value, row) => {
-          // Exhaustive search for email field in the row object
-          const email = 
-            row.studentEmail || 
-            row.email || 
-            row.student?.email || 
-            row.username || 
-            row.userEmail ||
-            row.authorEmail ||
-            value;
-          
-          return email || '—';
-        },
-      },
-      { field: 'studentNumber', headerName: 'Student ID', width: 120 },
-      { 
-        field: 'facultyEmail', 
-        headerName: 'Faculty Email', 
-        flex: 1, 
-        minWidth: 200,
-        valueGetter: (value, row) => {
-           const fEmail = 
-            row.facultyEmail || 
-            row.faculty?.email || 
-            row.profEmail || 
-            row.professorEmail ||
-            value;
-           
-           return fEmail || '—';
-        }
-      },
+      { field: 'id', headerName: 'ID', width: 70 },
+      { field: 'studentNumber', headerName: 'Student #', width: 130 },
+      { field: 'facultyEmail', headerName: 'Faculty', flex: 1.2, minWidth: 200 },
+      { field: 'section', headerName: 'Section', width: 90 },
       {
         field: 'performance',
         headerName: 'Performance',
         width: 110,
-        valueGetter: (_value, row) => computeMetricAverage(row.scores).toFixed(1),
+        valueGetter: (_value, row) => computeMetricAverage(row.answers).toFixed(1),
       },
       {
         field: 'ciphertext',
@@ -120,6 +54,36 @@ const EvaluationTable = ({ evaluations, loading, error, onRetry, sharedGridSx, c
         minWidth: 280,
         renderCell: (params) => {
           const rowId = params?.row?.id;
+          let content = params?.value || '••••••••••';
+          
+          if (decryptedRows[rowId]) {
+              const rawContent = decryptedRows[rowId];
+              try {
+                  const data = typeof rawContent === 'string' && rawContent.startsWith('{') 
+                    ? JSON.parse(rawContent) 
+                    : rawContent;
+                  
+                  if (typeof data === 'object' && data !== null) {
+                      const parts = [];
+                      if (data.generalComment && data.generalComment.trim()) {
+                          parts.push(data.generalComment);
+                      }
+                      
+                      const textParts = data.textResponses || data.dynamicResponses || [];
+                      textParts.forEach(r => {
+                          if (r.value && r.value.trim()) {
+                              parts.push(`${r.title}: ${r.value}`);
+                          }
+                      });
+                      
+                      content = parts.length > 0 ? parts.join(' | ') : 'No qualitative feedback.';
+                  } else {
+                      content = String(rawContent);
+                  }
+              } catch {
+                  content = String(rawContent);
+              }
+          }
           return (
             <Box
               sx={{
@@ -131,108 +95,49 @@ const EvaluationTable = ({ evaluations, loading, error, onRetry, sharedGridSx, c
                 color: decryptedRows[rowId] ? 'text.primary' : 'text.secondary',
               }}
             >
-              {params?.value || '••••••••••'}
+              {content}
             </Box>
           );
         },
       },
       {
-        field: 'action',
+        field: 'actions',
         headerName: 'Security',
-        width: 140,
+        width: 130,
         sortable: false,
-        renderCell: (params) => {
-          const rowId = params?.row?.id;
-          const isDecrypting = rowId && decryptingId === rowId;
-          const isDecrypted = rowId && decryptedRows[rowId];
-          return (
-            <Button
-              variant="contained"
-              size="small"
-              color="secondary"
-              startIcon={isDecrypted ? <LockIcon /> : <LockOpenIcon />}
-              onClick={() => rowId && handleDecrypt(rowId)}
-              disabled={!rowId || isDecrypting || isDecrypted}
-            >
-              {isDecrypting ? 'Decrypting...' : isDecrypted ? 'Decrypted' : 'Decrypt'}
-            </Button>
-          );
-        },
-      },
-      {
-        field: 'exports',
-        headerName: 'Exports',
-        width: 220,
-        sortable: false,
-        renderCell: (params) => {
-          const rowId = params?.row?.id;
-          const exportingCsv = Boolean(rowId && exportingRows[`${rowId}-csv`]);
-          const exportingPdf = Boolean(rowId && exportingRows[`${rowId}-pdf`]);
-
-          return (
-            <Box sx={{ display: 'flex', gap: 0.75 }}>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<DownloadIcon fontSize="small" />}
-                onClick={() => rowId && handleExport(rowId, 'csv')}
-                disabled={!rowId || exportingCsv || exportingPdf}
-              >
-                {exportingCsv ? 'CSV...' : 'CSV'}
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<DownloadIcon fontSize="small" />}
-                onClick={() => rowId && handleExport(rowId, 'pdf')}
-                disabled={!rowId || exportingCsv || exportingPdf}
-              >
-                {exportingPdf ? 'PDF...' : 'PDF'}
-              </Button>
-            </Box>
-          );
-        },
+        renderCell: (params) => (
+          <Button
+            size="small"
+            startIcon={decryptedRows[params.row.id] ? <VisibilityIcon /> : <LockOpenIcon />}
+            onClick={() => handleDecrypt(params.row.id)}
+            disabled={Boolean(decryptedRows[params.row.id]) || decryptingIds[params.row.id]}
+          >
+            {decryptingIds[params.row.id] ? '...' : decryptedRows[params.row.id] ? 'Viewed' : 'Decrypt'}
+          </Button>
+        ),
       },
     ],
-    [decryptedRows, decryptingId, exportingRows]
+    [decryptedRows, decryptingIds]
   );
 
   return (
-    <Paper elevation={0} sx={{ ...cardSurfaceSx, p: 2.5, borderColor: '#e2e8f0', mt: 1 }}>
-      {error && (
-        <Box sx={{ mb: 2 }}>
-          <LoadStateCard
-            icon={<InsightsOutlinedIcon sx={{ fontSize: 52 }} />}
-            title="We could not load encrypted feedback"
-            description="Please retry to continue reviewing submissions."
-            severity="error"
-            actionLabel="Try again"
-            onAction={onRetry}
-            minHeight={180}
-          />
-        </Box>
-      )}
-      {loading ? (
-        <Box sx={{ p: 1 }}>
-          <Skeleton variant="text" width="32%" height={32} />
-          <Skeleton variant="rounded" height={460} sx={{ mt: 1.5 }} />
-        </Box>
-      ) : evaluations.length === 0 ? (
+    <Paper elevation={0} sx={{ ...cardSurfaceSx, p: 0, overflow: 'hidden', mt: 1, minHeight: 600 }}>
+      {error ? (
         <LoadStateCard
-          icon={<InsightsOutlinedIcon sx={{ fontSize: 58 }} />}
-          title="No submissions yet"
-          description="Student evaluations will appear here after secure submission."
-          actionLabel="Refresh"
+          title="Unable to load evaluations"
+          description="A server error occurred while fetching the submission list."
+          severity="error"
+          actionLabel="Try again"
           onAction={onRetry}
         />
+      ) : loading ? (
+        <Skeleton variant="rounded" height={600} />
       ) : (
-      <Box sx={{ height: 560, width: '100%' }}>
+      <Box sx={{ height: 600, width: '100%' }}>
         <DataGrid
           rows={evaluations}
           columns={columns}
-          loading={loading}
-          getRowId={(row) => row._rowId || row.id}
-          pageSizeOptions={[10, 25, 50]}
+          pageSizeOptions={[5, 10, 25, 50]}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           getRowHeight={() => 'auto'}
           disableRowSelectionOnClick

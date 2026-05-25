@@ -141,7 +141,7 @@ const ProfessorManager = ({ professors, loading, error, onRetry, sharedGridSx, c
           onAction={() => openProfessorDialog()}
         />
       ) : (
-      <Box sx={{ height: 520 }}>
+      <Box sx={{ height: 520, minHeight: 520, width: '100%' }}>
         <DataGrid
           rows={professors}
           columns={columns}

@@ -27,6 +27,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   exportAllEvaluationsCsv,
   exportAllEvaluationsPdf,
+  exportSubmissionsCsv,
+  exportSubmissionsPdf,
   fetchCriteria,
   fetchEvaluationsAdmin,
   fetchProfessors,
@@ -79,12 +81,12 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
     isLoading: evaluationsLoading,
     isError: evaluationsError,
     refetch: refetchEvaluations,
+    error: evalQueryError,
   } = useQuery({
     queryKey: ['admin-evaluations'],
     queryFn: fetchEvaluationsAdmin,
     enabled: Boolean(token),
     retry: 1,
-    onError: (err) => setError(getApiErrorMessage(err, 'Unable to load evaluations.')),
   });
  
   const {
@@ -92,12 +94,12 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
     isLoading: professorsLoading,
     isError: professorsError,
     refetch: refetchProfessors,
+    error: profQueryError,
   } = useQuery({
     queryKey: ['admin-professors'],
     queryFn: fetchProfessors,
     enabled: Boolean(token),
     retry: 1,
-    onError: (err) => setError(getApiErrorMessage(err, 'Unable to load professors.')),
   });
  
   const {
@@ -105,13 +107,21 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
     isLoading: criteriaLoading,
     isError: criteriaError,
     refetch: refetchCriteria,
+    error: critQueryError,
   } = useQuery({
     queryKey: ['admin-criteria'],
     queryFn: fetchCriteria,
     enabled: Boolean(token),
     retry: 1,
-    onError: (err) => setError(getApiErrorMessage(err, 'Unable to load criteria.')),
   });
+
+  // Handle errors via useEffect for TanStack Query v5 compatibility
+  React.useEffect(() => {
+    const firstError = evalQueryError || profQueryError || critQueryError;
+    if (firstError) {
+      setError(getApiErrorMessage(firstError, 'Unable to load dashboard data.'));
+    }
+  }, [evalQueryError, profQueryError, critQueryError]);
  
   const withStableRowIds = (rows, prefix) => {
     if (!Array.isArray(rows)) return [];
@@ -218,12 +228,19 @@ const AdminDashboard = ({ adminToken, onPreviewFaculty }) => {
   const handleExportAll = async (format) => {
     setExportingAllFormat(format);
     try {
-      if (format === 'csv') {
-        await exportAllEvaluationsCsv();
+      if (activeTab === TAB_INDEX.OVERVIEW) {
+        if (format === 'csv') await exportAllEvaluationsCsv();
+        else await exportAllEvaluationsPdf();
+        toast.success(`Dashboard insights exported as ${format.toUpperCase()}.`);
+      } else if (activeTab === TAB_INDEX.EVALUATIONS) {
+        if (format === 'csv') await exportSubmissionsCsv();
+        else await exportSubmissionsPdf();
+        toast.success(`Evaluation submissions exported as ${format.toUpperCase()}.`);
       } else {
-        await exportAllEvaluationsPdf();
+        // For Professors or Criteria, we could add specific exports if needed, 
+        // but user specifically asked for overall and evaluation pages.
+        toast.info(`Exporting ${format.toUpperCase()} for current tab...`);
       }
-      toast.success(`All evaluations exported as ${format.toUpperCase()}.`);
     } catch (err) {
       toast.error(getApiErrorMessage(err, `Unable to export ${format.toUpperCase()} right now.`));
     } finally {

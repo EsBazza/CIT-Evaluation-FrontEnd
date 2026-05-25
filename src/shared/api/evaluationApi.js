@@ -22,7 +22,7 @@ export const fetchPublicProfessors = async (section) => {
 
 export const fetchPublicCriteria = async () => {
   const { data } = await apiClient.get('/api/public/criteria');
-  return data;
+  return ensureArrayResponse(data);
 };
 
 export const fetchHandshakeKey = async () => {

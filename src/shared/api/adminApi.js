@@ -67,6 +67,11 @@ export const fetchEvaluationsAdmin = async () => {
   return ensureArrayResponse(data);
 };
 
+export const fetchDashboardStats = async (section = 'ALL') => {
+  const { data } = await apiClient.get('/api/evaluations/admin/stats', { params: { section } });
+  return data;
+};
+
 export const decryptEvaluation = async (id, facultyEmail) => {
   const params = facultyEmail ? { facultyEmail } : undefined;
   const { data } = await apiClient.get(`/api/evaluations/${id}/decrypt`, { params });
@@ -79,6 +84,14 @@ export const exportAllEvaluationsCsv = async () => {
 
 export const exportAllEvaluationsPdf = async () => {
   return downloadFile('/api/evaluations/export/pdf', 'all_evaluations.pdf');
+};
+
+export const exportSubmissionsCsv = async () => {
+  return downloadFile('/api/evaluations/export/submissions/csv', 'evaluations_submissions.csv');
+};
+
+export const exportSubmissionsPdf = async () => {
+  return downloadFile('/api/evaluations/export/submissions/pdf', 'evaluations_submissions.pdf');
 };
 
 export const exportFacultyEvaluationsCsv = async (facultyEmail) => {
@@ -141,12 +154,24 @@ export const fetchUsers = async () => {
 };
 
 export const createCriterion = async (payload) => {
-  const { data } = await apiClient.post('/api/admin/criteria', { title: payload.title });
+  const { data } = await apiClient.post('/api/admin/criteria', {
+    title: payload.title,
+    type: payload.type || 'RADIO',
+    mandatory: payload.mandatory ?? true,
+    options: payload.options || null,
+    orderIndex: payload.orderIndex || 0,
+  });
   return data;
 };
 
 export const updateCriterion = async (id, payload) => {
-  const { data } = await apiClient.put(`/api/admin/criteria/${id}`, { title: payload.title });
+  const { data } = await apiClient.put(`/api/admin/criteria/${id}`, {
+    title: payload.title,
+    type: payload.type || 'RADIO',
+    mandatory: payload.mandatory ?? true,
+    options: payload.options || null,
+    orderIndex: payload.orderIndex || 0,
+  });
   return data;
 };
 

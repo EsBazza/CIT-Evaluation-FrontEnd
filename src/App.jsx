@@ -304,7 +304,7 @@ const App = () => {
   return (
     <ThemeProvider theme={appTheme}>
       <CssBaseline />
-      <Box sx={{ minHeight: '100vh', py: { xs: 2, md: 4 } }}>
+      <Box sx={{ minHeight: '100vh', py: isAuthenticated ? { xs: 2, md: 4 } : 0 }}>
         {isAuthenticated ? (
           <>
             <Container maxWidth="lg">
@@ -324,15 +324,22 @@ const App = () => {
                     <Avatar src={sessionAvatar} sx={{ bgcolor: 'primary.main', width: 56, height: 56, fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                       {(session.email && session.email[0]?.toUpperCase()) || session.role?.charAt(0) || 'C'}
                     </Avatar>
-                    <Box>
+                    <Box sx={{ position: 'relative' }}>
                       <Box
                         component="img"
                         src={uaLogo}
                         alt="UA logo"
-                        sx={{ height: 26, mb: 0.5, display: 'block' }}
+                        sx={{ 
+                          height: 48, 
+                          mb: 0.5, 
+                          display: 'block',
+                          filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))',
+                          transition: 'transform 0.3s ease',
+                          '&:hover': { transform: 'scale(1.05)' }
+                        }}
                       />
-                      <Typography variant="overline" color="text.secondary" letterSpacing={1.2}>
-                        Active Session
+                      <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.15em', fontWeight: 800, opacity: 0.8 }}>
+                        University of the Assumption
                       </Typography>
                       <Typography variant="h5" fontWeight={800} color="primary.main">
                         {headerTitle}

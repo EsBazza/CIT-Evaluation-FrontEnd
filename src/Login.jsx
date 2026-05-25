@@ -109,7 +109,7 @@ const Login = ({ onLogin }) => {
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          opacity: 0.12, // Konting adjustment sa transparency para mas professional
+          opacity: 0.18, // Slightly increased visibility
           zIndex: -1,
         }
       }}
@@ -131,24 +131,26 @@ const Login = ({ onLogin }) => {
             component="img"
             src={uaLogo}
             alt="University of the Assumption logo"
-            sx={{ height: { xs: 64, sm: 96 }, width: 'auto', mb: 2 }}
+            sx={{ 
+              height: { xs: 100, sm: 130 }, 
+              width: 'auto', 
+              mb: 3,
+              filter: 'drop-shadow(0 12px 24px rgba(12, 74, 138, 0.25))',
+              transition: 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              '&:hover': {
+                transform: 'scale(1.08) rotate(1deg)'
+              }
+            }}
           />
 
-          <Stack 
-            direction={{ xs: 'column', sm: 'row' }} 
-            spacing={1} 
-            justifyContent="center" 
-            sx={{ mb: 2 }}
-          >
-            <Chip icon={<SchoolIcon />} label="UA College of IT" color="primary" variant="outlined" />
-            <Chip icon={<LockPersonIcon />} label="Secure Evaluation" color="secondary" variant="outlined" />
-          </Stack>
-
-          <Typography variant="h4" color="primary" sx={{ mb: 0.5, fontWeight: 700, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
+          <Typography variant="h3" color="primary" sx={{ mb: 1, fontWeight: 900, fontSize: { xs: '2.25rem', sm: '2.75rem' }, letterSpacing: '-0.03em' }}>
             CIT-EVAL
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Anonymous faculty evaluation platform
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, fontWeight: 600, opacity: 0.9 }}>
+            Secure Faculty Evaluation Platform
+          </Typography>
+          <Typography variant="overline" display="block" color="text.secondary" sx={{ mb: 5, letterSpacing: '0.2em', opacity: 0.7 }}>
+            University of the Assumption
           </Typography>
 
           {error && (
@@ -169,7 +171,6 @@ const Login = ({ onLogin }) => {
                   <GoogleLogin
                     onSuccess={onSuccess}
                     onError={() => setError('Google Sign-In failed.')}
-                    useOneTap
                   />
                 </Box>
 
